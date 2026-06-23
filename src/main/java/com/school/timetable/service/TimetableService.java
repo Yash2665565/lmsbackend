@@ -57,7 +57,17 @@ public class TimetableService {
 
     @Transactional(readOnly = true)
     public List<TimetableSlotDto> getSectionTimetable(Long sectionId, Long academicYearId) {
-        return timetableSlotRepository.findBySectionIdAndAcademicYearId(sectionId, academicYearId)
+        List<TimetableSlot> slots = (academicYearId == null)
+                ? timetableSlotRepository.findBySectionIdAndAcademicYearIsCurrent(sectionId, true)
+                : timetableSlotRepository.findBySectionIdAndAcademicYearId(sectionId, academicYearId);
+        return slots.stream()
+                .map(this::toSlotDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TimetableSlotDto> getTeacherTimetable(Long teacherId) {
+        return timetableSlotRepository.findByTeacherIdAndCurrentYear(teacherId)
                 .stream()
                 .map(this::toSlotDto)
                 .toList();
@@ -98,6 +108,13 @@ public class TimetableService {
 
     public void deleteSlot(Long id) {
         timetableSlotRepository.deleteById(id);
+    }
+
+    public void deleteSlotByCell(Long sectionId, Integer dayOfWeek, Long periodId) {
+        timetableSlotRepository.findBySectionIdAndAcademicYearIsCurrent(sectionId, true)
+            .stream()
+            .filter(s -> s.getDayOfWeek() == dayOfWeek && s.getPeriod().getId().equals(periodId))
+            .forEach(s -> timetableSlotRepository.deleteById(s.getId()));
     }
 
     // ── Mappers ──────────────────────────────────────────────────────────────

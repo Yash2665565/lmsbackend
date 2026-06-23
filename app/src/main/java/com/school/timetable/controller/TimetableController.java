@@ -9,7 +9,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -39,15 +38,26 @@ public class TimetableController {
         return ResponseEntity.ok(ApiResponse.ok(timetableService.getSectionTimetable(sectionId, academicYearId)));
     }
 
+    @GetMapping("/teachers/{teacherId}/timetable")
+    public ResponseEntity<ApiResponse<List<TimetableSlotDto>>> getTeacherTimetable(
+            @PathVariable Long teacherId) {
+        return ResponseEntity.ok(ApiResponse.ok(timetableService.getTeacherTimetable(teacherId)));
+    }
+
+    @DeleteMapping("/sections/{sectionId}/timetable")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteSlotByCell(
+            @PathVariable Long sectionId,
+            @RequestParam Integer dayOfWeek,
+            @RequestParam Long periodId) {
+        timetableService.deleteSlotByCell(sectionId, dayOfWeek, periodId);
+        return ResponseEntity.ok(ApiResponse.ok("Slot cleared", null));
+    }
+
     @GetMapping("/students/{studentId}/timetable")
     public ResponseEntity<ApiResponse<List<TimetableSlotDto>>> getStudentTimetable(
             @PathVariable Long studentId) {
         return ResponseEntity.ok(ApiResponse.ok(timetableService.getStudentTimetable(studentId)));
-    }
-
-    @GetMapping("/timetable/me")
-    public ResponseEntity<ApiResponse<List<TimetableSlotDto>>> getMyTimetable(Authentication authentication) {
-        return ResponseEntity.ok(ApiResponse.ok(timetableService.getMyTimetable(authentication.getName())));
     }
 
     @PostMapping("/timetable-slots")

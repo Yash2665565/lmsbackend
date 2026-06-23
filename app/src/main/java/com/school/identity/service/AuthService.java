@@ -4,11 +4,14 @@ import com.school.config.JwtUtil;
 import com.school.identity.dto.LoginRequest;
 import com.school.identity.dto.LoginResponse;
 import com.school.identity.entity.User;
+import com.school.identity.repository.StudentRepository;
+import com.school.identity.repository.TeacherRepository;
 import com.school.identity.repository.UserRepository;
 import com.school.identity.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,6 +27,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final UserRoleRepository userRoleRepository;
+    private final TeacherRepository teacherRepository;
+    private final StudentRepository studentRepository;
 
     public LoginResponse login(LoginRequest req) {
         authenticationManager.authenticate(
@@ -35,9 +40,8 @@ public class AuthService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // Load roles explicitly — avoids any JPA lazy-loading gaps
-        List<String> roles = userRoleRepository.findByUserId(user.getId()).stream()
-                .map(r -> "ROLE_" + r.getRole().trim().toUpperCase().replace(" ", "_"))
+        List<String> roles = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
 
         Map<String, Object> extraClaims = Map.of(
@@ -47,12 +51,17 @@ public class AuthService {
 
         String token = jwtUtil.generateToken(user, extraClaims);
 
+        Long teacherId = teacherRepository.findByUserId(user.getId()).map(t -> t.getId()).orElse(null);
+        Long studentId = studentRepository.findByUserId(user.getId()).map(s -> s.getId()).orElse(null);
+
         return LoginResponse.builder()
                 .token(token)
                 .userId(user.getId())
                 .email(user.getEmail())
                 .name(user.getFullName())
                 .roles(roles)
+                .teacherId(teacherId)
+                .studentId(studentId)
                 .build();
     }
 }

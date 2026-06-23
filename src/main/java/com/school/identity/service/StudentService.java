@@ -6,9 +6,11 @@ import com.school.identity.dto.StudentCreateRequest;
 import com.school.identity.dto.StudentDto;
 import com.school.identity.entity.Student;
 import com.school.identity.entity.User;
+import com.school.identity.entity.UserRole;
 import com.school.identity.repository.GuardianRepository;
 import com.school.identity.repository.StudentRepository;
 import com.school.identity.repository.UserRepository;
+import com.school.identity.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,7 @@ public class StudentService {
 
     private final StudentRepository studentRepository;
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final GuardianRepository guardianRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -69,6 +72,14 @@ public class StudentService {
             u.setCreatedAt(LocalDateTime.now());
             u.setUpdatedAt(LocalDateTime.now());
             u = userRepository.save(u);
+
+            UserRole role = new UserRole();
+            role.setUserId(u.getId());
+            role.setRole("STUDENT");
+            role.setCreatedAt(LocalDateTime.now());
+            role.setUpdatedAt(LocalDateTime.now());
+            userRoleRepository.save(role);
+
             s.setUser(u);
         }
 
@@ -97,6 +108,44 @@ public class StudentService {
         return toDto(studentRepository.save(student));
     }
 
+    public StudentDto setCredentials(Long studentId, String email, String password) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new NotFoundException("Student not found"));
+
+        User u = student.getUser();
+        if (u == null) {
+            // Create a new login account
+            if (userRepository.existsByEmail(email)) {
+                throw new BadRequestException("Email already in use by another account");
+            }
+            u = new User();
+            u.setName(student.getFirstName());
+            u.setLname(student.getLastName());
+            u.setStatus("active");
+            u.setCreatedAt(LocalDateTime.now());
+        }
+        u.setEmail(email);
+        u.setPassword(passwordEncoder.encode(password));
+        u.setUpdatedAt(LocalDateTime.now());
+        User savedUser = userRepository.save(u);
+
+        // Assign STUDENT role if not already assigned
+        boolean hasRole = userRoleRepository.findByUserId(savedUser.getId())
+                .stream().anyMatch(r -> "STUDENT".equals(r.getRole()));
+        if (!hasRole) {
+            UserRole role = new UserRole();
+            role.setUserId(savedUser.getId());
+            role.setRole("STUDENT");
+            role.setCreatedAt(LocalDateTime.now());
+            role.setUpdatedAt(LocalDateTime.now());
+            userRoleRepository.save(role);
+        }
+
+        student.setUser(savedUser);
+        student.setUpdatedAt(LocalDateTime.now());
+        return toDto(studentRepository.save(student));
+    }
+
     public void delete(Long id) {
         studentRepository.deleteById(id);
     }
@@ -104,6 +153,7 @@ public class StudentService {
     private StudentDto toDto(Student s) {
         return StudentDto.builder()
                 .id(s.getId())
+                .email(s.getUser() != null ? s.getUser().getEmail() : null)
                 .admissionNo(s.getAdmissionNo())
                 .firstName(s.getFirstName())
                 .lastName(s.getLastName())

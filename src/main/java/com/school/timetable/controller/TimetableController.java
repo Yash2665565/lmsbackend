@@ -34,8 +34,24 @@ public class TimetableController {
     @GetMapping("/sections/{sectionId}/timetable")
     public ResponseEntity<ApiResponse<List<TimetableSlotDto>>> getSectionTimetable(
             @PathVariable Long sectionId,
-            @RequestParam Long academicYearId) {
+            @RequestParam(required = false) Long academicYearId) {
         return ResponseEntity.ok(ApiResponse.ok(timetableService.getSectionTimetable(sectionId, academicYearId)));
+    }
+
+    @GetMapping("/teachers/{teacherId}/timetable")
+    public ResponseEntity<ApiResponse<List<TimetableSlotDto>>> getTeacherTimetable(
+            @PathVariable Long teacherId) {
+        return ResponseEntity.ok(ApiResponse.ok(timetableService.getTeacherTimetable(teacherId)));
+    }
+
+    @DeleteMapping("/sections/{sectionId}/timetable")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteSlotByCell(
+            @PathVariable Long sectionId,
+            @RequestParam Integer dayOfWeek,
+            @RequestParam Long periodId) {
+        timetableService.deleteSlotByCell(sectionId, dayOfWeek, periodId);
+        return ResponseEntity.ok(ApiResponse.ok("Slot cleared", null));
     }
 
     @GetMapping("/students/{studentId}/timetable")

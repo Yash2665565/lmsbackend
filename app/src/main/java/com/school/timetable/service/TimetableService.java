@@ -8,9 +8,7 @@ import com.school.academics.repository.SectionRepository;
 import com.school.academics.repository.SubjectRepository;
 import com.school.common.exception.NotFoundException;
 import com.school.identity.entity.Teacher;
-import com.school.identity.repository.StudentRepository;
 import com.school.identity.repository.TeacherRepository;
-import com.school.identity.repository.UserRepository;
 import com.school.timetable.dto.PeriodDto;
 import com.school.timetable.dto.TimetableSlotDto;
 import com.school.timetable.dto.TimetableSlotRequest;
@@ -36,8 +34,6 @@ public class TimetableService {
     private final SubjectRepository subjectRepository;
     private final TeacherRepository teacherRepository;
     private final AcademicYearRepository academicYearRepository;
-    private final UserRepository userRepository;
-    private final StudentRepository studentRepository;
 
     public List<PeriodDto> listPeriods() {
         return periodRepository.findAllByOrderBySortOrder()
@@ -61,14 +57,17 @@ public class TimetableService {
 
     @Transactional(readOnly = true)
     public List<TimetableSlotDto> getSectionTimetable(Long sectionId, Long academicYearId) {
-        Long effectiveYearId = academicYearId;
-        if (effectiveYearId == null) {
-            effectiveYearId = academicYearRepository.findByIsCurrent(true)
-                    .map(AcademicYear::getId)
-                    .orElse(null);
-        }
-        if (effectiveYearId == null) return List.of();
-        return timetableSlotRepository.findBySectionIdAndAcademicYearId(sectionId, effectiveYearId)
+        List<TimetableSlot> slots = (academicYearId == null)
+                ? timetableSlotRepository.findBySectionIdAndAcademicYearIsCurrent(sectionId, true)
+                : timetableSlotRepository.findBySectionIdAndAcademicYearId(sectionId, academicYearId);
+        return slots.stream()
+                .map(this::toSlotDto)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<TimetableSlotDto> getTeacherTimetable(Long teacherId) {
+        return timetableSlotRepository.findByTeacherIdAndCurrentYear(teacherId)
                 .stream()
                 .map(this::toSlotDto)
                 .toList();
@@ -80,14 +79,6 @@ public class TimetableService {
                 .stream()
                 .map(this::toSlotDto)
                 .toList();
-    }
-
-    @Transactional(readOnly = true)
-    public List<TimetableSlotDto> getMyTimetable(String email) {
-        return userRepository.findByEmail(email)
-                .flatMap(u -> studentRepository.findByUserId(u.getId()))
-                .map(s -> getStudentTimetable(s.getId()))
-                .orElse(List.of());
     }
 
     public TimetableSlotDto createSlot(TimetableSlotRequest req) {
@@ -117,6 +108,13 @@ public class TimetableService {
 
     public void deleteSlot(Long id) {
         timetableSlotRepository.deleteById(id);
+    }
+
+    public void deleteSlotByCell(Long sectionId, Integer dayOfWeek, Long periodId) {
+        timetableSlotRepository.findBySectionIdAndAcademicYearIsCurrent(sectionId, true)
+            .stream()
+            .filter(s -> s.getDayOfWeek() == dayOfWeek && s.getPeriod().getId().equals(periodId))
+            .forEach(s -> timetableSlotRepository.deleteById(s.getId()));
     }
 
     // ── Mappers ──────────────────────────────────────────────────────────────

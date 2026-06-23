@@ -18,4 +18,6 @@ public class LoginResponse {
     private String email;
     private String name;
     private List<String> roles;
+    private Long teacherId;
+    private Long studentId;
 }

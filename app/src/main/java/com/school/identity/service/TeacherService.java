@@ -54,7 +54,7 @@ public class TeacherService {
 
         UserRole userRole = new UserRole();
         userRole.setUserId(u.getId());
-        userRole.setRole("subject teacher");
+        userRole.setRole("SUBJECT_TEACHER");
         userRole.setCreatedAt(LocalDateTime.now());
         userRole.setUpdatedAt(LocalDateTime.now());
         userRoleRepository.save(userRole);
@@ -68,6 +68,26 @@ public class TeacherService {
         t.setUpdatedAt(LocalDateTime.now());
 
         return toDto(teacherRepository.save(t));
+    }
+
+    public TeacherDto update(Long id, TeacherCreateRequest req) {
+        Teacher teacher = teacherRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Teacher not found"));
+        User user = teacher.getUser();
+        if (req.getName() != null) user.setName(req.getName());
+        if (req.getLname() != null) user.setLname(req.getLname());
+        if (req.getEmail() != null) user.setEmail(req.getEmail());
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(req.getPassword()));
+        }
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        if (req.getEmployeeNo() != null) teacher.setEmployeeNo(req.getEmployeeNo());
+        if (req.getQualification() != null) teacher.setQualification(req.getQualification());
+        if (req.getJoiningDate() != null) teacher.setJoiningDate(req.getJoiningDate());
+        teacher.setUpdatedAt(LocalDateTime.now());
+        return toDto(teacherRepository.save(teacher));
     }
 
     public void delete(Long id) {

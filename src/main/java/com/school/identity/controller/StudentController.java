@@ -53,6 +53,19 @@ public class StudentController {
         return ResponseEntity.ok(ApiResponse.ok(studentService.update(id, request)));
     }
 
+    @PutMapping("/{id}/credentials")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<StudentDto>> setCredentials(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, String> body) {
+        String email    = body.get("email");
+        String password = body.get("password");
+        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("email and password are required"));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(studentService.setCredentials(id, email, password)));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {

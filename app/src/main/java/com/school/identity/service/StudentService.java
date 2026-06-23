@@ -51,7 +51,7 @@ public class StudentService {
         s.setLastName(req.getLastName());
         s.setAdmissionNo(req.getAdmissionNo());
         s.setDob(req.getDob());
-        s.setGender(normalizeStudentGender(req.getGender()));
+        s.setGender(req.getGender());
         s.setPhone(req.getPhone());
         s.setAddress(req.getAddress());
 
@@ -68,18 +68,17 @@ public class StudentService {
             u.setPassword(passwordEncoder.encode(req.getPassword() != null ? req.getPassword() : "Student@123"));
             u.setName(req.getFirstName());
             u.setLname(req.getLastName());
-            u.setRole("STUDENT");
             u.setStatus("active");
             u.setCreatedAt(LocalDateTime.now());
             u.setUpdatedAt(LocalDateTime.now());
             u = userRepository.save(u);
 
-            UserRole ur = new UserRole();
-            ur.setUserId(u.getId());
-            ur.setRole("STUDENT");
-            ur.setCreatedAt(LocalDateTime.now());
-            ur.setUpdatedAt(LocalDateTime.now());
-            userRoleRepository.save(ur);
+            UserRole role = new UserRole();
+            role.setUserId(u.getId());
+            role.setRole("STUDENT");
+            role.setCreatedAt(LocalDateTime.now());
+            role.setUpdatedAt(LocalDateTime.now());
+            userRoleRepository.save(role);
 
             s.setUser(u);
         }
@@ -97,7 +96,7 @@ public class StudentService {
         student.setLastName(req.getLastName());
         student.setAdmissionNo(req.getAdmissionNo());
         student.setDob(req.getDob());
-        student.setGender(normalizeStudentGender(req.getGender()));
+        student.setGender(req.getGender());
         student.setPhone(req.getPhone());
         student.setAddress(req.getAddress());
 
@@ -109,22 +108,52 @@ public class StudentService {
         return toDto(studentRepository.save(student));
     }
 
-    public void delete(Long id) {
-        studentRepository.deleteById(id);
+    public StudentDto setCredentials(Long studentId, String email, String password) {
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new NotFoundException("Student not found"));
+
+        User u = student.getUser();
+        if (u == null) {
+            // Create a new login account
+            if (userRepository.existsByEmail(email)) {
+                throw new BadRequestException("Email already in use by another account");
+            }
+            u = new User();
+            u.setName(student.getFirstName());
+            u.setLname(student.getLastName());
+            u.setStatus("active");
+            u.setCreatedAt(LocalDateTime.now());
+        }
+        u.setEmail(email);
+        u.setPassword(passwordEncoder.encode(password));
+        u.setUpdatedAt(LocalDateTime.now());
+        User savedUser = userRepository.save(u);
+
+        // Assign STUDENT role if not already assigned
+        boolean hasRole = userRoleRepository.findByUserId(savedUser.getId())
+                .stream().anyMatch(r -> "STUDENT".equals(r.getRole()));
+        if (!hasRole) {
+            UserRole role = new UserRole();
+            role.setUserId(savedUser.getId());
+            role.setRole("STUDENT");
+            role.setCreatedAt(LocalDateTime.now());
+            role.setUpdatedAt(LocalDateTime.now());
+            userRoleRepository.save(role);
+        }
+
+        student.setUser(savedUser);
+        student.setUpdatedAt(LocalDateTime.now());
+        return toDto(studentRepository.save(student));
     }
 
-    private String normalizeStudentGender(String gender) {
-        if (gender == null) return null;
-        return switch (gender.trim().toLowerCase()) {
-            case "male", "m" -> "M";
-            case "female", "f" -> "F";
-            default -> "OTHER";
-        };
+    public void delete(Long id) {
+        studentRepository.deleteById(id);
     }
 
     private StudentDto toDto(Student s) {
         return StudentDto.builder()
                 .id(s.getId())
+                .email(s.getUser() != null ? s.getUser().getEmail() : null)
                 .admissionNo(s.getAdmissionNo())
                 .firstName(s.getFirstName())
                 .lastName(s.getLastName())
