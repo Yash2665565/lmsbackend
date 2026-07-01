@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -31,6 +32,12 @@ public class ExamSubject {
 
     @Column(name = "max_marks")
     private int maxMarks = 100;
+
+    @Column(name = "exam_date")
+    private LocalDate examDate;
+
+    @Column(name = "start_time")
+    private String startTime;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

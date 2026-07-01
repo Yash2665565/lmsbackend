@@ -26,7 +26,7 @@ public class NoticeController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
-    public ResponseEntity<ApiResponse<NoticeDto>> create(@Valid @RequestBody NoticeCreateRequest req) {
+    public ResponseEntity<ApiResponse<NoticeDto>> createNotice(@RequestBody NoticeCreateRequest req) {
         return ResponseEntity.ok(ApiResponse.ok(noticeService.create(req)));
     }
 

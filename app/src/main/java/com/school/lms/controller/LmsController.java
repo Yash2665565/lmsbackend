@@ -1,17 +1,20 @@
 package com.school.lms.controller;
 
 import com.school.common.dto.ApiResponse;
+import com.school.identity.entity.User;
 import com.school.lms.dto.*;
 import com.school.lms.entity.CourseNote;
 import com.school.lms.service.LmsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -19,6 +22,22 @@ import java.util.List;
 public class LmsController {
 
     private final LmsService lmsService;
+
+    // ── Courses (scoped subject listing) ─────────────────────────────────────
+
+    @GetMapping("/lms/courses")
+    @PreAuthorize("hasAnyRole('STUDENT','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER','ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> myCourses(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) Long sectionId) {
+        return ResponseEntity.ok(ApiResponse.ok(lmsService.listCourses(user, sectionId)));
+    }
+
+    @GetMapping("/lms/my-sections")
+    @PreAuthorize("hasAnyRole('TEACHER','CLASS_TEACHER','SUBJECT_TEACHER','ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> myTeachingSections(@AuthenticationPrincipal User user) {
+        return ResponseEntity.ok(ApiResponse.ok(lmsService.myTeachingSections(user)));
+    }
 
     // ── Units ──────────────────────────────────────────────────────────────
 
@@ -28,7 +47,7 @@ public class LmsController {
     }
 
     @PostMapping("/subjects/{subjectId}/units")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<UnitDto>> createUnit(
             @PathVariable Long subjectId,
             @RequestBody UnitRequest req) {
@@ -37,7 +56,7 @@ public class LmsController {
     }
 
     @PutMapping("/units/{unitId}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<UnitDto>> updateUnit(
             @PathVariable Long unitId,
             @RequestBody UnitRequest req) {
@@ -60,7 +79,7 @@ public class LmsController {
     }
 
     @PostMapping("/units/{unitId}/notes")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<CourseNoteDto>> createNote(
             @PathVariable Long unitId,
             @RequestBody NoteRequest req) {
@@ -72,7 +91,7 @@ public class LmsController {
     }
 
     @DeleteMapping("/notes/{noteId}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<Void>> deleteNote(@PathVariable Long noteId) {
         lmsService.deleteNote(noteId);
         return ResponseEntity.ok(ApiResponse.ok("Note deleted", null));
@@ -88,7 +107,7 @@ public class LmsController {
     }
 
     @PostMapping("/units/{unitId}/assignments")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<AssignmentDto>> createAssignment(
             @PathVariable Long unitId,
             @RequestBody AssignmentRequest req) {
@@ -99,7 +118,7 @@ public class LmsController {
     }
 
     @DeleteMapping("/assignments/{assignmentId}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<Void>> deleteAssignment(@PathVariable Long assignmentId) {
         lmsService.deleteAssignment(assignmentId);
         return ResponseEntity.ok(ApiResponse.ok("Assignment deleted", null));
@@ -124,14 +143,14 @@ public class LmsController {
     }
 
     @GetMapping("/assignments/{assignmentId}/submissions")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<List<AssignmentSubmissionDto>>> listSubmissions(
             @PathVariable Long assignmentId) {
         return ResponseEntity.ok(ApiResponse.ok(lmsService.listSubmissions(assignmentId)));
     }
 
     @PatchMapping("/submissions/{submissionId}/grade")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<AssignmentSubmissionDto>> grade(
             @PathVariable Long submissionId,
             @RequestBody GradeRequest req) {
@@ -147,7 +166,7 @@ public class LmsController {
     }
 
     @PostMapping("/units/{unitId}/surprise-tests")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<SurpriseTestDto>> createSurpriseTest(
             @PathVariable Long unitId,
             @RequestBody SurpriseTestRequest req) {
@@ -158,7 +177,7 @@ public class LmsController {
     }
 
     @PutMapping("/surprise-tests/{testId}")
-    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','CLASS_TEACHER','SUBJECT_TEACHER')")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN','TEACHER','CLASS_TEACHER','SUBJECT_TEACHER')")
     public ResponseEntity<ApiResponse<SurpriseTestDto>> updateSurpriseTest(
             @PathVariable Long testId,
             @RequestBody SurpriseTestRequest req) {

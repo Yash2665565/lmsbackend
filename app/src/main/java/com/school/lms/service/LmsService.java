@@ -2,14 +2,22 @@ package com.school.lms.service;
 
 import com.school.academics.repository.SubjectRepository;
 import com.school.common.exception.NotFoundException;
+import com.school.identity.entity.User;
+import com.school.identity.repository.StudentRepository;
+import com.school.identity.repository.TeacherRepository;
 import com.school.lms.dto.*;
 import com.school.lms.entity.*;
 import com.school.lms.repository.*;
+import com.school.lms.repository.LmsCourseRepository.CourseRow;
+import com.school.lms.repository.LmsCourseRepository.MySectionRow;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,6 +33,80 @@ public class LmsService {
     private final AssignmentSubmissionRepository submissionRepo;
     private final SubjectRepository subjectRepo;
     private final SurpriseTestRepository surpriseTestRepo;
+    private final LmsCourseRepository courseRepo;
+    private final StudentRepository studentRepo;
+    private final TeacherRepository teacherRepo;
+
+    // ── Scoped course (subject) listing ──────────────────────────────────────
+
+    private boolean hasAuthority(User user, String fragment) {
+        for (GrantedAuthority a : user.getAuthorities()) {
+            if (a.getAuthority().toUpperCase().contains(fragment)) return true;
+        }
+        return false;
+    }
+
+    private Map<String, Object> courseToMap(CourseRow r) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", r.getId());
+        m.put("name", r.getName());
+        m.put("code", r.getCode());
+        m.put("description", r.getDescription());
+        return m;
+    }
+
+    /**
+     * Courses (subjects) scoped to the caller:
+     *  - STUDENT: subjects of their own class (sectionId ignored)
+     *  - TEACHER: subjects they teach in the chosen section; all their subjects if no section
+     *  - ADMIN:   subjects of the chosen section's class; all subjects if no section
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listCourses(User user, Long sectionId) {
+        if (hasAuthority(user, "ADMIN")) {
+            if (sectionId != null) {
+                return courseRepo.classSubjectsOfSection(sectionId).stream().map(this::courseToMap).collect(Collectors.toList());
+            }
+            // no section → every subject (admins browsing the catalogue)
+            return subjectRepo.findAll().stream().map(s -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("id", s.getId());
+                m.put("name", s.getName());
+                m.put("code", s.getCode());
+                m.put("description", s.getDescription());
+                return m;
+            }).collect(Collectors.toList());
+        }
+        if (hasAuthority(user, "TEACHER")) {
+            Long teacherId = teacherRepo.findByUserId(user.getId()).map(t -> t.getId()).orElse(null);
+            if (teacherId == null) return new ArrayList<>();
+            List<CourseRow> rows = (sectionId != null)
+                    ? courseRepo.teacherSubjectsInSection(teacherId, sectionId)
+                    : courseRepo.teacherAllSubjects(teacherId);
+            return rows.stream().map(this::courseToMap).collect(Collectors.toList());
+        }
+        if (hasAuthority(user, "STUDENT")) {
+            Long studentId = studentRepo.findByUserId(user.getId()).map(s -> s.getId()).orElse(null);
+            if (studentId == null) return new ArrayList<>();
+            return courseRepo.studentSubjects(studentId).stream().map(this::courseToMap).collect(Collectors.toList());
+        }
+        return new ArrayList<>();
+    }
+
+    /** Classes & sections the current teacher is allocated to — used to scope the LMS filter. */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> myTeachingSections(User user) {
+        Long teacherId = teacherRepo.findByUserId(user.getId()).map(t -> t.getId()).orElse(null);
+        if (teacherId == null) return new ArrayList<>();
+        return courseRepo.teacherSections(teacherId).stream().map(r -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("sectionId", r.getSectionId());
+            m.put("sectionName", r.getSectionName());
+            m.put("classId", r.getClassId());
+            m.put("className", r.getClassName());
+            return m;
+        }).collect(Collectors.toList());
+    }
 
     // ── Units ──────────────────────────────────────────────────────────────
 

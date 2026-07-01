@@ -108,10 +108,48 @@ public class ExamService {
         es.setSubject(subject);
         es.setClassGrade(classGrade);
         es.setMaxMarks(req.getMaxMarks());
+        es.setExamDate(req.getExamDate());
+        es.setStartTime(req.getStartTime());
         es.setCreatedAt(LocalDateTime.now());
         es.setUpdatedAt(LocalDateTime.now());
 
         return toExamSubjectDto(examSubjectRepository.save(es));
+    }
+
+    public void deleteExamSubject(Long examSubjectId) {
+        examSubjectRepository.deleteById(examSubjectId);
+    }
+
+    /** Subjects mapped to a class (class_subjects) — for the datesheet dropdown. */
+    public List<ExamSubjectDto> listClassSubjects(Long classGradeId) {
+        return examSubjectRepository.findClassSubjects(classGradeId).stream()
+                .map(s -> ExamSubjectDto.builder()
+                        .subjectId(s.getId()).subjectName(s.getName())
+                        .classGradeId(classGradeId).build())
+                .collect(Collectors.toList());
+    }
+
+    /** A student's datesheet: papers for their class, grouped per exam. */
+    public List<StudentExamDto> getStudentDatesheet(Long studentId) {
+        Long classGradeId = examSubjectRepository.findClassGradeByStudent(studentId);
+        if (classGradeId == null) return List.of();
+        java.util.Map<Long, StudentExamDto> byExam = new java.util.LinkedHashMap<>();
+        for (ExamSubject es : examSubjectRepository.findByClassGradeIdOrderByExamDateAsc(classGradeId)) {
+            Long exId = es.getExam() != null ? es.getExam().getId() : null;
+            if (exId == null) continue;
+            StudentExamDto dto = byExam.computeIfAbsent(exId, k -> StudentExamDto.builder()
+                    .examId(exId)
+                    .examName(es.getExam().getName())
+                    .papers(new java.util.ArrayList<>())
+                    .build());
+            dto.getPapers().add(StudentExamDto.Paper.builder()
+                    .subjectName(es.getSubject() != null ? es.getSubject().getName() : null)
+                    .examDate(es.getExamDate())
+                    .startTime(es.getStartTime())
+                    .maxMarks(es.getMaxMarks())
+                    .build());
+        }
+        return new java.util.ArrayList<>(byExam.values());
     }
 
     // ---------------------------------------------------------------
@@ -284,6 +322,8 @@ public class ExamService {
                 .classGradeId(es.getClassGrade() != null ? es.getClassGrade().getId() : null)
                 .className(es.getClassGrade() != null ? es.getClassGrade().getName() : null)
                 .maxMarks(es.getMaxMarks())
+                .examDate(es.getExamDate())
+                .startTime(es.getStartTime())
                 .build();
     }
 

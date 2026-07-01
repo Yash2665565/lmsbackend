@@ -21,9 +21,9 @@ public class NoticeService {
     @Transactional(readOnly = true)
     public List<NoticeDto> listAll() {
         return noticeRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
-                .map(this::toDto)
-                .toList();
+        .stream()
+        .map(this::toDto)
+        .toList();
     }
 
     public NoticeDto create(NoticeCreateRequest req) {
@@ -31,6 +31,7 @@ public class NoticeService {
         notice.setName(req.getName());
         notice.setContent(req.getContent());
         notice.setTargetType(req.getTargetType());
+        notice.setPdfName(req.getPdfName());
         notice.setTargetId(req.getTargetId());
         notice.setMandatory(req.getMandatory());
         notice.setCreatedAt(LocalDateTime.now());
@@ -52,6 +53,7 @@ public class NoticeService {
                 .mandatory(n.getMandatory())
                 .targetType(n.getTargetType())
                 .targetId(n.getTargetId())
+                .pdfName(n.getPdfName())
                 .createdAt(n.getCreatedAt())
                 .build();
     }

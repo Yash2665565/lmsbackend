@@ -1,4 +1,4 @@
-package com.school.inventory.entity;
+package com.school.academics.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -8,26 +8,20 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "inventory_txns")
+@Table(name = "teacher_expertise")
 @Getter
 @Setter
-public class InventoryTxn {
+public class TeacherExpertise {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "item_id")
-    private Long itemId;
+    @Column(name = "teacher_id")
+    private Long teacherId;
 
-    private String type;
-
-    private Integer quantity;
-
-    private String note;
-
-    @Column(name = "created_by")
-    private Long createdBy;
+    @Column(name = "topic_id")
+    private Long topicId;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

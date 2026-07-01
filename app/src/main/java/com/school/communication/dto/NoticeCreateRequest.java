@@ -17,7 +17,7 @@ public class NoticeCreateRequest {
 
     @NotBlank
     private String content;
-
+    private String pdfName;
     private String targetType;
     private Long targetId;
     private String mandatory;

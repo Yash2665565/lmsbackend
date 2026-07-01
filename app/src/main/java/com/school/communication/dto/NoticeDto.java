@@ -15,6 +15,7 @@ public class NoticeDto {
     private Long id;
     private String name;
     private String content;
+    private String pdfName;
     private String mandatory;
     private String targetType;
     private Long targetId;

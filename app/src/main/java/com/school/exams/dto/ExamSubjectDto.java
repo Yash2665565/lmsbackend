@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -19,4 +21,6 @@ public class ExamSubjectDto {
     private Long classGradeId;
     private String className;
     private int maxMarks;
+    private LocalDate examDate;
+    private String startTime;
 }

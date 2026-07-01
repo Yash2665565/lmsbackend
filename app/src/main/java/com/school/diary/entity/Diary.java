@@ -1,40 +1,38 @@
-package com.school.communication.entity;
+package com.school.diary.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "company_briefings")
 @Getter
 @Setter
-public class Notice {
+@Table(name = "diary")
+public class Diary {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    private String title;
 
     @Column(columnDefinition = "TEXT")
-    private String content;
+    private String description;
 
-    private String version;
+    @Column(name = "due_date")
+    private LocalDate dueDate;
 
-    private String mandatory;
+    @Column(name = "subject_id")
+    private Long subjectId;
 
-    @Column(name = "pdf_name")
-    private String pdfName;
-    
+    @Column(name = "section_id")
+    private Long sectionId;
 
-
-    @Column(name = "target_type")
-    private String targetType;
-
-    @Column(name = "target_id")
-    private Long targetId;
+    @Column(name = "teacher_id")
+    private Long teacherId;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

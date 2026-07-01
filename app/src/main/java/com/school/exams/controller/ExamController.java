@@ -50,10 +50,30 @@ public class ExamController {
     @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
     public ResponseEntity<ApiResponse<ExamSubjectDto>> addExamSubject(
             @PathVariable Long id,
-            @RequestBody @Valid ExamSubjectDto req) {
+            @RequestBody ExamSubjectDto req) {
         req.setExamId(id);
         ExamSubjectDto created = examService.addExamSubject(req);
         return ResponseEntity.ok(ApiResponse.ok("Exam subject added successfully", created));
+    }
+
+    // DELETE /api/exam-subjects/{examSubjectId}
+    @DeleteMapping("/exam-subjects/{examSubjectId}")
+    @PreAuthorize("hasAnyRole('ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteExamSubject(@PathVariable Long examSubjectId) {
+        examService.deleteExamSubject(examSubjectId);
+        return ResponseEntity.ok(ApiResponse.ok("Paper removed", null));
+    }
+
+    // GET /api/classes/{classGradeId}/exam-subjects — subjects mapped to a class
+    @GetMapping("/classes/{classGradeId}/exam-subjects")
+    public ResponseEntity<ApiResponse<List<ExamSubjectDto>>> classSubjects(@PathVariable Long classGradeId) {
+        return ResponseEntity.ok(ApiResponse.ok(examService.listClassSubjects(classGradeId)));
+    }
+
+    // GET /api/students/{studentId}/exams — the student's datesheet
+    @GetMapping("/students/{studentId}/exams")
+    public ResponseEntity<ApiResponse<List<StudentExamDto>>> studentDatesheet(@PathVariable Long studentId) {
+        return ResponseEntity.ok(ApiResponse.ok(examService.getStudentDatesheet(studentId)));
     }
 
     // GET /api/exam-subjects/{examSubjectId}/marks
